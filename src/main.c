@@ -201,14 +201,19 @@ int main(int argc, char *argv[])
      *
      * extern int socket (int __domain, int __type, int __protocol) __THROW;
      *
-     * htons() handles byte order of little endian machines. In big endian
-     * machines it returns the value it is given.
+     * AF_PACKET and PF_PACKET are of address and protocol family.
+     * `man 2 socket` uses AF_PACKET, but the tutorial at the link below
+     * uses PF_PACKET. However, BSD manual says their values are the same.
      *
-     * See `man 7 packet` for explanation for socket domain and socket type.
+     * Tutorial link: https://www.programmersought.com/article/40053885963/
+     *
+     * htons() handles byte order of little endian machines. In big endian
+     * machines it returns the value it is given. See `man htons`.
+     *
+     * See `man 7 packet`
      *
      */
 
-    // if ((sock = socket(AF_INET, SOCK_STREAM, 0 )) == -1) {
     if ((sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP))) == -1) {
         ERROR_SOCKET_CREATION;
         return EXIT_FAILURE;
