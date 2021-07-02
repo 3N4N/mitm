@@ -1,6 +1,6 @@
 CC     = gcc
 CFLAGS = -g -w -Iinc/
-LIBS   = -lGL -lGLU -lglut
+LIBS   =
 
 SRCS   = $(wildcard src/*.c)
 OBJS   = $(patsubst src/%.c,bin/%.o,$(SRCS))
@@ -8,13 +8,16 @@ DEPS   = $(OBJS:.o:=.d)
 DIRS   = src inc bin
 EXE    = a.out
 
-all: $(DIRS) $(EXE)
+all: $(DIRS) $(EXE) relay
 
 $(DIRS):
 	mkdir -p $@
 
 $(EXE): $(OBJS)
 	$(CC) -o $@ $^ $(LIBS)
+
+relay: ./relay.c
+	$(CC) -o relay relay.c $(LIBS)
 
 bin/%.o : src/%.c
 	$(CC) -o $@ $(CFLAGS) -c $<
