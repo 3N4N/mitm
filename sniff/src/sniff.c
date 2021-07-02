@@ -1,9 +1,10 @@
-#include <netinet/in.h>
-#include <errno.h>
-#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <netinet/in.h>
+#include <errno.h>
+#include <netdb.h>
 
 #include <netinet/ip_icmp.h>     //Provides declarations for icmp header
 #include <netinet/udp.h>         //Provides declarations for udp header
@@ -18,58 +19,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-void process_packet(unsigned char*, int);
-void print_ip_header(unsigned char*, int);
-void print_tcp_packet(unsigned char *, int );
-void print_udp_packet(unsigned char *, int );
-void print_icmp_packet(unsigned char*, int );
-void print_data (unsigned char*, int);
-
-FILE *logfile;
 struct sockaddr_in source,dest;
 int tcp=0,udp=0,icmp=0,others=0,igmp=0,total=0,i,j;
 
-int main()
-{
-    int saddr_size, data_size;
-    struct sockaddr saddr;
 
-    unsigned char *buffer = (unsigned char *) malloc(65536); //Its Big!
-
-    logfile=fopen("log.txt","w");
-    if(logfile==NULL) {
-        printf("Unable to create log.txt file.");
-    }
-    printf("Starting...\n");
-
-    int sock_raw = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-    //setsockopt(sock_raw , SOL_SOCKET , SO_BINDTODEVICE , "eth0" , strlen("eth0")+ 1 );
-
-    if(sock_raw < 0) {
-        //Print the error with proper message
-        perror("Socket Error");
-        return 1;
-    }
-
-    while(1) {
-        saddr_size = sizeof saddr;
-        //Receive a packet
-        data_size = recvfrom(sock_raw, buffer, 65536, 0,
-                             &saddr, (socklen_t*)&saddr_size);
-        if(data_size <0 )
-        {
-            printf("Recvfrom error , failed to get packets\n");
-            return 1;
-        }
-        //Now process the packet
-        process_packet(buffer, data_size);
-    }
-    close(sock_raw);
-    printf("Finished");
-    return 0;
-}
-
-void process_packet(unsigned char* buffer, int size)
+void process_packet(FILE* logfile, unsigned char* buffer, int size)
 {
     //Get the IP Header part of this packet , excluding the ethernet header
     struct iphdr *iph = (struct iphdr*)(buffer + sizeof(struct ethhdr));
@@ -77,7 +31,7 @@ void process_packet(unsigned char* buffer, int size)
     switch (iph->protocol) {
     case 1:  //ICMP Protocol
         ++icmp;
-        // print_icmp_packet( buffer , size);
+        // print_icmp_packet(logfile, buffer , size);
         break;
 
     case 2:  //IGMP Protocol
@@ -86,24 +40,23 @@ void process_packet(unsigned char* buffer, int size)
 
     case 6:  //TCP Protocol
         ++tcp;
-        print_tcp_packet(buffer, size);
+        print_tcp_packet(logfile, buffer, size);
         break;
 
     case 17: //UDP Protocol
         ++udp;
-        // print_udp_packet(buffer , size);
+        // print_udp_packet(logfile, buffer , size);
         break;
 
     default: //Some Other Protocol like ARP etc.
         ++others;
         break;
     }
-    printf(
-        "TCP : %d   UDP : %d   ICMP : %d   IGMP : %d   Others : %d   Total : %d\r", tcp, udp, icmp, igmp, others,
-        total);
+    printf("TCP : %d  UDP: %d  ICMP: %d  IGMP: %d  Others: %d  Total: %d\r",
+           tcp, udp, icmp, igmp, others, total);
 }
 
-void print_ethernet_header(unsigned char* Buffer, int Size)
+void print_ethernet_header(FILE* logfile, unsigned char* Buffer, int Size)
 {
     struct ethhdr *eth = (struct ethhdr *)Buffer;
 
@@ -121,9 +74,9 @@ void print_ethernet_header(unsigned char* Buffer, int Size)
             (unsigned short)eth->h_proto);
 }
 
-void print_ip_header(unsigned char* Buffer, int Size)
+void print_ip_header(FILE* logfile, unsigned char* Buffer, int Size)
 {
-    print_ethernet_header(Buffer, Size);
+    print_ethernet_header(logfile, Buffer, Size);
 
     unsigned short iphdrlen;
 
@@ -159,7 +112,7 @@ void print_ip_header(unsigned char* Buffer, int Size)
     fprintf(logfile, "   |-Destination IP   : %s\n", inet_ntoa(dest.sin_addr));
 }
 
-void print_tcp_packet(unsigned char* Buffer, int Size)
+void print_tcp_packet(FILE* logfile, unsigned char* Buffer, int Size)
 {
     unsigned short iphdrlen;
 
@@ -172,7 +125,7 @@ void print_tcp_packet(unsigned char* Buffer, int Size)
 
     fprintf(logfile, "\n\n***************TCP Packet***************\n");
 
-    print_ip_header(Buffer,Size);
+    print_ip_header(logfile, Buffer,Size);
 
     fprintf(logfile, "\n");
     fprintf(logfile, "TCP Header\n");
@@ -204,18 +157,18 @@ void print_tcp_packet(unsigned char* Buffer, int Size)
     fprintf(logfile, "\n");
 
     fprintf(logfile, "IP Header\n");
-    print_data(Buffer,iphdrlen);
+    print_data(logfile, Buffer,iphdrlen);
 
     fprintf(logfile, "TCP Header\n");
-    print_data(Buffer+iphdrlen,tcph->doff*4);
+    print_data(logfile, Buffer+iphdrlen,tcph->doff*4);
 
     fprintf(logfile, "Data Payload\n");
-    print_data(Buffer + header_size, Size - header_size );
+    print_data(logfile, Buffer + header_size, Size - header_size );
 
     fprintf(logfile, "\n################################################");
 }
 
-void print_udp_packet(unsigned char *Buffer, int Size)
+void print_udp_packet(FILE* logfile, unsigned char *Buffer, int Size)
 {
 
     unsigned short iphdrlen;
@@ -230,7 +183,7 @@ void print_udp_packet(unsigned char *Buffer, int Size)
 
     fprintf(logfile, "\n\n***************UDP Packet***************\n");
 
-    print_ip_header(Buffer,Size);
+    print_ip_header(logfile, Buffer,Size);
 
     fprintf(logfile, "\nUDP Header\n");
     fprintf(logfile, "   |-Source Port      : %d\n", ntohs(udph->source));
@@ -240,20 +193,20 @@ void print_udp_packet(unsigned char *Buffer, int Size)
 
     fprintf(logfile, "\n");
     fprintf(logfile, "IP Header\n");
-    print_data(Buffer, iphdrlen);
+    print_data(logfile, Buffer, iphdrlen);
 
     fprintf(logfile, "UDP Header\n");
-    print_data(Buffer+iphdrlen, sizeof udph);
+    print_data(logfile, Buffer+iphdrlen, sizeof udph);
 
     fprintf(logfile, "Data Payload\n");
 
     //Move the pointer ahead and reduce the size of string
-    print_data(Buffer + header_size, Size - header_size);
+    print_data(logfile, Buffer + header_size, Size - header_size);
 
     fprintf(logfile, "\n################################################");
 }
 
-void print_icmp_packet(unsigned char* Buffer, int Size)
+void print_icmp_packet(FILE* logfile, unsigned char* Buffer, int Size)
 {
     unsigned short iphdrlen;
 
@@ -266,7 +219,7 @@ void print_icmp_packet(unsigned char* Buffer, int Size)
 
     fprintf(logfile, "\n\n**************ICMP Packet***************\n");
 
-    print_ip_header(Buffer, Size);
+    print_ip_header(logfile, Buffer, Size);
 
     fprintf(logfile, "\n");
 
@@ -289,20 +242,20 @@ void print_icmp_packet(unsigned char* Buffer, int Size)
     fprintf(logfile, "\n");
 
     fprintf(logfile, "IP Header\n");
-    print_data(Buffer, iphdrlen);
+    print_data(logfile, Buffer, iphdrlen);
 
     fprintf(logfile, "UDP Header\n");
-    print_data(Buffer + iphdrlen, sizeof icmph);
+    print_data(logfile, Buffer + iphdrlen, sizeof icmph);
 
     fprintf(logfile, "Data Payload\n");
 
     //Move the pointer ahead and reduce the size of string
-    print_data(Buffer + header_size, (Size - header_size));
+    print_data(logfile, Buffer + header_size, (Size - header_size));
 
     fprintf(logfile, "\n################################################");
 }
 
-void print_data (unsigned char* data, int Size)
+void print_data (FILE* logfile, unsigned char* data, int Size)
 {
     int i, j;
     for(i=0; i < Size; i++) {

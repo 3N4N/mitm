@@ -192,8 +192,8 @@ int main(int argc, char *argv[])
 
 
     // spoof_ip = argv[1]; victim_ip = argv[2]; interface = argv[3];
-    spoof_ip = "10.9.0.5";
-    victim_ip = "10.9.0.6";
+    spoof_ip = "10.9.0.6";
+    victim_ip = "10.9.0.5";
     interface = "eth0";
 
 
