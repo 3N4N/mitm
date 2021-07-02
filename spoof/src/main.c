@@ -172,7 +172,7 @@ char send_payload_to_victim(const int sd,
             return 0;
         }
         fprintf(stdout, "[+] SPOOFED Packet sent to '%s'\n", victim_ip);
-        sleep(1);
+        sleep(5);
     }
     return 1;
 }

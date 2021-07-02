@@ -3,7 +3,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
-#include <netinet/if_ether.h>    //For ETH_P_ALL
+#include <netinet/if_ether.h>
 
 int main()
 {

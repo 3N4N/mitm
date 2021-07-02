@@ -70,7 +70,7 @@ void print_ethernet_header(FILE* logfile, unsigned char* Buffer, int Size)
             "   |-Source Address      : %.2X-%.2X-%.2X-%.2X-%.2X-%.2X \n",
             eth->h_source[0], eth->h_source[1], eth->h_source[2],
             eth->h_source[3], eth->h_source[4], eth->h_source[5]);
-    fprintf(logfile, "   |-Protocol            : %u \n",
+    fprintf(logfile, "   |-Protocol            : %u\n",
             (unsigned short)eth->h_proto);
 }
 
