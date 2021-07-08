@@ -252,7 +252,7 @@ void print_icmp_packet(FILE* logfile, unsigned char* buffer, int size)
     fprintf(logfile, "IP Header\n");
     print_data(logfile, buffer, iphdrlen);
 
-    fprintf(logfile, "UDP Header\n");
+    fprintf(logfile, "ICMP Header\n");
     print_data(logfile, buffer + iphdrlen, sizeof icmph);
 
     fprintf(logfile, "Data Payload\n");
@@ -315,7 +315,7 @@ static uint16_t compute_checksum(uint16_t *addr, int len)
     }
 
     if (len == 1) {
-        *(uint8_t*)(&odd_byte) = * (uint8_t*)addr;
+        *(uint8_t *)(&odd_byte) = *(uint8_t *)addr;
         sum += odd_byte;
     }
 
@@ -330,6 +330,7 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
 {
     // sockid = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     struct ethhdr *eth = (struct ethhdr *)buffer;
+    unsigned short ethdrlen = sizeof(struct ethhdr);
 
     struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ethhdr));
     unsigned short iphdrlen =iph->ihl*4;
@@ -372,7 +373,7 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
         return;
     }
 
-    struct icmphdr *icmph = (struct icmphdr*)(buffer + iphdrlen + sizeof(struct ethhdr));
+    struct icmphdr *icmph = (struct icmphdr*)(buffer + iphdrlen + ethdrlen);
     int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof icmph;
 
     // int z=0;
@@ -383,9 +384,10 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
     // print_data(stdout, buffer + header_size, size - header_size );
 
     iph->check = 0;
-    iph->check = compute_checksum((uint16_t*)iph, iph->ihl<<2);
+    iph->check = compute_checksum((uint16_t*)iph, iphdrlen);
     icmph->checksum = 0;
-    icmph->checksum = compute_checksum((uint16_t *)icmph, size - iphdrlen);
+    icmph->checksum = compute_checksum((uint16_t *)icmph,
+                                       size - ethdrlen - iphdrlen);
 
     struct sockaddr_ll device;
     memset(&device, 0, sizeof device);
@@ -393,15 +395,12 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
 
     int ret;
     // ret = send(sockid, eth, size, 0);
-    ret = sendto(sockid, eth, size, 0, (const struct sockaddr *)&device, sizeof(device));
+    ret = sendto(sockid, eth, size, 0,
+                 (const struct sockaddr *)&device, sizeof(device));
 
     if (ret > 0) {
-        printf("[%d] ICMP packet relayed\n", ret);
-        printf("     |-from ");
-        PRINT_MAC_ADDRESS(stdout, eth->h_source);
-        printf("     |-to   ");
+        printf("[%d] ICMP packet relayed to ", ret);
         PRINT_MAC_ADDRESS(stdout, eth->h_dest);
-        printf("\n");
     }
 
     // close(sockid);
