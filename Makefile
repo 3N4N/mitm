@@ -1,29 +1,7 @@
-CC     = gcc
-CFLAGS = -g -w -Iinc/
-LIBS   = -lGL -lGLU -lglut
-
-SRCS   = $(wildcard src/*.c)
-OBJS   = $(patsubst src/%.c,bin/%.o,$(SRCS))
-DEPS   = $(OBJS:.o:=.d)
-DIRS   = src inc bin
-EXE    = a.out
-
-all: $(DIRS) $(EXE)
-
-$(DIRS):
-	mkdir -p $@
-
-$(EXE): $(OBJS)
-	$(CC) -o $@ $^ $(LIBS)
-
-bin/%.o : src/%.c
-	$(CC) -o $@ $(CFLAGS) -c $<
-
-bin/%.o : src/%.c inc/%.h
-	$(CC) -o $@ $(CFLAGS) -c $<
-
-run : all
-	./$(EXE)
+all:
+	$(MAKE) -C spoof/
+	$(MAKE) -C sniff/
 
 clean:
-	rm -rf bin *~ $(EXE)
+	$(MAKE) clean -C spoof/
+	$(MAKE) clean -C sniff/
