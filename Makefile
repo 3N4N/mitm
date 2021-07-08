@@ -1,7 +1,7 @@
 all:
-	$(MAKE) -C spoof/
-	$(MAKE) -C sniff/
+	$(MAKE) -C spoofer/
+	$(MAKE) -C sniffer/
 
 clean:
-	$(MAKE) clean -C spoof/
-	$(MAKE) clean -C sniff/
+	$(MAKE) clean -C spoofer/
+	$(MAKE) clean -C sniffer/

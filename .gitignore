@@ -5,5 +5,5 @@ bin/
 *.out
 log.txt
 
-spoof/spoof
-sniff/sniff
+spoofer/spoof
+sniffer/sniff
