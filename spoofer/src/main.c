@@ -10,11 +10,8 @@
 #include <netinet/ip.h>
 #include <net/ethernet.h>
 
+#include "util.h"
 #include "packets.h"
-
-#define CHARTOMAC(cmac,mac) \
-    sscanf((cmac),"%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",\
-           &(mac)[0],&(mac)[1],&(mac)[2],&(mac)[3],&(mac)[4],&(mac)[5])
 
 # define BROADCAST_ADDR (uint8_t[6]){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
@@ -26,22 +23,6 @@
 # define ERROR_COULD_NOT_SEND           fprintf(stderr,"ERROR: Could not send\n")
 # define ERROR_COULD_NOT_RECEIVE        fprintf(stderr,"ERROR: Could not receive\n")
 # define ERROR_DISPLAY_USAGE(F)         fprintf(stderr,"USAGE: %s source_ip target_ip interface\n",F)
-
-# define PRINT_MAC_ADDRESS(X)   fprintf(stdout, \
-                                        "%02X:%02X:%02X:%02X:%02X:%02X\n", \
-                                        X[0],               \
-                                        X[1],               \
-                                        X[2],               \
-                                        X[3],               \
-                                        X[4],               \
-                                        X[5]);
-# define PRINT_IP_ADDRESS(X)    fprintf(stdout, \
-                                        "%02d.%02d.%02d.%02d\n", \
-                                        X[0],               \
-                                        X[1],               \
-                                        X[2],               \
-                                        X[3]);
-
 
 
 // https://stackoverflow.com/a/1779758/11135136
@@ -138,18 +119,18 @@ uint8_t *get_victim_mac(const int sd, const char *victim_ip)
 
     fprintf(stdout, "[+] Got response from victim\n");
     fprintf(stdout, "[*] Sender MAC address: ");
-    PRINT_MAC_ADDRESS(arp_pkt->sender_mac);
+    PRINT_MAC_ADDRESS(stdout, arp_pkt->sender_mac);
     fprintf(stdout, "[*] Sender ip address: ");
-    PRINT_IP_ADDRESS(arp_pkt->sender_ip);
+    PRINT_IP_ADDRESS(stdout, arp_pkt->sender_ip);
     fprintf(stdout, "[*] Target MAC address: ");
-    PRINT_MAC_ADDRESS(arp_pkt->target_mac);
+    PRINT_MAC_ADDRESS(stdout, arp_pkt->target_mac);
     fprintf(stdout, "[*] Target ip address: ");
-    PRINT_IP_ADDRESS(arp_pkt->target_ip);
+    PRINT_IP_ADDRESS(stdout, arp_pkt->target_ip);
 
     memcpy(victim_mac_address, arp_pkt->sender_mac,
            MACADDR_LEN * sizeof(uint8_t));
     fprintf(stdout, "[*] Victim's MAC address: ");
-    PRINT_MAC_ADDRESS(victim_mac_address);
+    PRINT_MAC_ADDRESS(stdout, victim_mac_address);
     return (victim_mac_address);
 }
 
@@ -245,7 +226,7 @@ int main(int argc, char *argv[])
     }
 
     printf("[*] Attacker MAC address: ");
-    PRINT_MAC_ADDRESS(hacker_mac);
+    PRINT_MAC_ADDRESS(stdout, hacker_mac);
 
     memset(&device, 0, sizeof device);
     if (!get_index_from_interface(&device, interface)) {

@@ -6,6 +6,7 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 
+#include "util.h"
 #include "sniff.h"
 
 int main()

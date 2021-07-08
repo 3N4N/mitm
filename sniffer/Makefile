@@ -1,5 +1,5 @@
 CC     = gcc
-CFLAGS = -g -w -Iinc/
+CFLAGS = -g -w -Iinc/ -I../util/
 LIBS   =
 
 SRCS   = $(wildcard src/*.c)

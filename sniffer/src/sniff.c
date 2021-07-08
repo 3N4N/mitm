@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <linux/if_packet.h>
 
+#include "util.h"
 #include "sniff.h"
 
 struct sockaddr_in source,dest;
@@ -68,14 +69,10 @@ void print_ethernet_header(FILE* logfile, unsigned char* buffer, int size)
 
     fprintf(logfile, "\n");
     fprintf(logfile, "Ethernet Header\n");
-    fprintf(logfile,
-            "   |-Destination Address : %.2X:%.2X:%.2X:%.2X:%.2X:%.2X \n",
-            eth->h_dest[0], eth->h_dest[1], eth->h_dest[2],
-            eth->h_dest[3], eth->h_dest[4], eth->h_dest[5]);
-    fprintf(logfile,
-            "   |-Source Address      : %.2X:%.2X:%.2X:%.2X:%.2X:%.2X \n",
-            eth->h_source[0], eth->h_source[1], eth->h_source[2],
-            eth->h_source[3], eth->h_source[4], eth->h_source[5]);
+    fprintf(logfile, "   |-Destination Address : ");
+    PRINT_MAC_ADDRESS(logfile, eth->h_dest);
+    fprintf(logfile, "   |-Source Address      : ");
+    PRINT_MAC_ADDRESS(logfile, eth->h_source);
     fprintf(logfile, "   |-Protocol            : %u\n",
             (unsigned short)eth->h_proto);
 }
@@ -233,11 +230,17 @@ void print_icmp_packet(FILE* logfile, unsigned char* buffer, int size)
     fprintf(logfile, "   |-Type                 : %d",
             (unsigned int)(icmph->type));
 
-    if((unsigned int)(icmph->type) == 11) {
+    if((unsigned int)(icmph->type) == ICMP_TIME_EXCEEDED) {
         fprintf(logfile, "  (TTL Expired)\n");
     }
     else if((unsigned int)(icmph->type) == ICMP_ECHOREPLY) {
         fprintf(logfile, "  (ICMP Echo Reply)\n");
+    }
+    else if((unsigned int)(icmph->type) == ICMP_ECHO) {
+        fprintf(logfile, "  (ICMP Echo Request)\n");
+    }
+    else {
+        fprintf(logfile, "\n");
     }
 
     fprintf(logfile, "   |-Code                 : %d\n",
