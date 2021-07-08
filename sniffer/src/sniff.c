@@ -69,11 +69,11 @@ void print_ethernet_header(FILE* logfile, unsigned char* buffer, int size)
 
     fprintf(logfile, "\n");
     fprintf(logfile, "Ethernet Header\n");
-    fprintf(logfile, "   |-Destination Address : ");
+    fprintf(logfile, "   |-Destination Address  : ");
     PRINT_MAC_ADDRESS(logfile, eth->h_dest);
-    fprintf(logfile, "   |-Source Address      : ");
+    fprintf(logfile, "   |-Source Address       : ");
     PRINT_MAC_ADDRESS(logfile, eth->h_source);
-    fprintf(logfile, "   |-Protocol            : %u\n",
+    fprintf(logfile, "   |-Protocol             : %u\n",
             (unsigned short)eth->h_proto);
 }
 
@@ -94,25 +94,25 @@ void print_ip_header(FILE* logfile, unsigned char* buffer, int size)
 
     fprintf(logfile, "\n");
     fprintf(logfile, "IP Header\n");
-    fprintf(logfile, "   |-IP Version        : %d\n",
+    fprintf(logfile, "   |-IP Version         : %d\n",
             (unsigned int)iph->version);
-    fprintf(logfile, "   |-IP Header Length  : %d DWORDS or %d Bytes\n",
+    fprintf(logfile, "   |-IP Header Length   : %d DWORDS or %d Bytes\n",
             (unsigned int)iph->ihl,((unsigned int)(iph->ihl))*4);
-    fprintf(logfile, "   |-Type Of Service   : %d\n", (unsigned int)iph->tos);
-    fprintf(logfile, "   |-IP Total Length   : %d  Bytes(Size of Packet)\n",
+    fprintf(logfile, "   |-Type Of Service    : %d\n", (unsigned int)iph->tos);
+    fprintf(logfile, "   |-IP Total Length    : %d  Bytes(Size of Packet)\n",
             ntohs( iph->tot_len));
-    fprintf(logfile, "   |-Identification    : %d\n", ntohs(iph->id));
+    fprintf(logfile, "   |-Identification     : %d\n", ntohs(iph->id));
     // fprintf(logfile , "   |-Reserved ZERO Field   : %d\n",
     //         (unsigned int)iphdr->ip_reserved_zero);
     // fprintf(logfile , "   |-Dont Fragment Field   : %d\n",
     //         (unsigned int)iphdr->ip_dont_fragment);
     // fprintf(logfile , "   |-More Fragment Field   : %d\n",
     //         (unsigned int)iphdr->ip_more_fragment);
-    fprintf(logfile, "   |-TTL              : %d\n", (unsigned int)iph->ttl);
-    fprintf(logfile, "   |-Protocol         : %d\n", (unsigned int)iph->protocol);
-    fprintf(logfile, "   |-Checksum         : %d\n", ntohs(iph->check));
-    fprintf(logfile, "   |-Source IP        : %s\n", inet_ntoa(source.sin_addr));
-    fprintf(logfile, "   |-Destination IP   : %s\n", inet_ntoa(dest.sin_addr));
+    fprintf(logfile, "   |-TTL                : %d\n", (unsigned int)iph->ttl);
+    fprintf(logfile, "   |-Protocol           : %d\n", (unsigned int)iph->protocol);
+    fprintf(logfile, "   |-Checksum           : %d\n", ntohs(iph->check));
+    fprintf(logfile, "   |-Source IP          : %s\n", inet_ntoa(source.sin_addr));
+    fprintf(logfile, "   |-Destination IP     : %s\n", inet_ntoa(dest.sin_addr));
 }
 
 void print_tcp_packet(FILE* logfile, unsigned char* buffer, int size)
@@ -132,29 +132,29 @@ void print_tcp_packet(FILE* logfile, unsigned char* buffer, int size)
 
     fprintf(logfile, "\n");
     fprintf(logfile, "TCP Header\n");
-    fprintf(logfile, "   |-Source Port          : %u\n", ntohs(tcph->source));
-    fprintf(logfile, "   |-Destination Port     : %u\n", ntohs(tcph->dest));
-    fprintf(logfile, "   |-Sequence Number      : %u\n", ntohl(tcph->seq));
-    fprintf(logfile, "   |-Acknowledge Number   : %u\n", ntohl(tcph->ack_seq));
-    fprintf(logfile, "   |-Header Length        : %d DWORDS or %d BYTES\n",
+    fprintf(logfile, "   |-Source Port        : %u\n", ntohs(tcph->source));
+    fprintf(logfile, "   |-Destination Port   : %u\n", ntohs(tcph->dest));
+    fprintf(logfile, "   |-Sequence Number    : %u\n", ntohl(tcph->seq));
+    fprintf(logfile, "   |-Acknowledge Number : %u\n", ntohl(tcph->ack_seq));
+    fprintf(logfile, "   |-Header Length      : %d DWORDS or %d BYTES\n",
             (unsigned int)tcph->doff,(unsigned int)tcph->doff*4);
     //fprintf(logfile , "   |-CWR Flag : %d\n", (unsigned int)tcph->cwr);
     //fprintf(logfile , "   |-ECN Flag : %d\n", (unsigned int)tcph->ece);
-    fprintf(logfile, "   |-Urgent Flag          : %d\n",
+    fprintf(logfile, "   |-Urgent Flag        : %d\n",
             (unsigned int)tcph->urg);
-    fprintf(logfile, "   |-Acknowledgement Flag : %d\n",
+    fprintf(logfile, "   |-Ackn Flag          : %d\n",
             (unsigned int)tcph->ack);
-    fprintf(logfile, "   |-Push Flag            : %d\n",
+    fprintf(logfile, "   |-Push Flag          : %d\n",
             (unsigned int)tcph->psh);
-    fprintf(logfile, "   |-Reset Flag           : %d\n",
+    fprintf(logfile, "   |-Reset Flag         : %d\n",
             (unsigned int)tcph->rst);
-    fprintf(logfile, "   |-Synchronise Flag     : %d\n",
+    fprintf(logfile, "   |-Synchronise Flag   : %d\n",
             (unsigned int)tcph->syn);
-    fprintf(logfile, "   |-Finish Flag          : %d\n",
+    fprintf(logfile, "   |-Finish Flag        : %d\n",
             (unsigned int)tcph->fin);
-    fprintf(logfile, "   |-Window               : %d\n", ntohs(tcph->window));
-    fprintf(logfile, "   |-Checksum             : %d\n", ntohs(tcph->check));
-    fprintf(logfile, "   |-Urgent Pointer       : %d\n", tcph->urg_ptr);
+    fprintf(logfile, "   |-Window             : %d\n", ntohs(tcph->window));
+    fprintf(logfile, "   |-Checksum           : %d\n", ntohs(tcph->check));
+    fprintf(logfile, "   |-Urgent Pointer     : %d\n", tcph->urg_ptr);
     fprintf(logfile, "\n");
     fprintf(logfile, "                       DATA Dump                       ");
     fprintf(logfile, "\n");
@@ -168,7 +168,7 @@ void print_tcp_packet(FILE* logfile, unsigned char* buffer, int size)
     fprintf(logfile, "Data Payload\n");
     print_data(logfile, buffer + header_size, size - header_size );
 
-    fprintf(logfile, "\n################################################\n");
+    fprintf(logfile, "\n\n");
 }
 
 void print_udp_packet(FILE* logfile, unsigned char *buffer, int size)
@@ -189,10 +189,10 @@ void print_udp_packet(FILE* logfile, unsigned char *buffer, int size)
     print_ip_header(logfile, buffer, size);
 
     fprintf(logfile, "\nUDP Header\n");
-    fprintf(logfile, "   |-Source Port          : %d\n", ntohs(udph->source));
-    fprintf(logfile, "   |-Destination Port     : %d\n", ntohs(udph->dest));
-    fprintf(logfile, "   |-UDP Length           : %d\n", ntohs(udph->len));
-    fprintf(logfile, "   |-UDP Checksum         : %d\n", ntohs(udph->check));
+    fprintf(logfile, "   |-Source Port      : %d\n", ntohs(udph->source));
+    fprintf(logfile, "   |-Destination Port : %d\n", ntohs(udph->dest));
+    fprintf(logfile, "   |-UDP Length       : %d\n", ntohs(udph->len));
+    fprintf(logfile, "   |-UDP Checksum     : %d\n", ntohs(udph->check));
 
     fprintf(logfile, "\n");
     fprintf(logfile, "IP Header\n");
@@ -206,7 +206,7 @@ void print_udp_packet(FILE* logfile, unsigned char *buffer, int size)
     //Move the pointer ahead and reduce the size of string
     print_data(logfile, buffer + header_size, size - header_size);
 
-    fprintf(logfile, "\n################################################\n");
+    fprintf(logfile, "\n\n");
 }
 
 void print_icmp_packet(FILE* logfile, unsigned char* buffer, int size)
@@ -227,7 +227,7 @@ void print_icmp_packet(FILE* logfile, unsigned char* buffer, int size)
     fprintf(logfile, "\n");
 
     fprintf(logfile, "ICMP Header\n");
-    fprintf(logfile, "   |-Type                 : %d",
+    fprintf(logfile, "   |-Type         : %d",
             (unsigned int)(icmph->type));
 
     if((unsigned int)(icmph->type) == ICMP_TIME_EXCEEDED) {
@@ -243,12 +243,10 @@ void print_icmp_packet(FILE* logfile, unsigned char* buffer, int size)
         fprintf(logfile, "\n");
     }
 
-    fprintf(logfile, "   |-Code                 : %d\n",
-            (unsigned int)(icmph->code));
-    fprintf(logfile, "   |-Checksum             : %d\n",
-            ntohs(icmph->checksum));
-    //fprintf(logfile , "   |-ID       : %d\n", ntohs(icmph->id));
-    //fprintf(logfile , "   |-Sequence : %d\n", ntohs(icmph->sequence));
+    fprintf(logfile, "   |-Code         : %d\n", (unsigned int)(icmph->code));
+    fprintf(logfile, "   |-Checksum     : %d\n", ntohs(icmph->checksum));
+    //fprintf(logfile , "   |-ID        : %d\n", ntohs(icmph->id));
+    //fprintf(logfile , "   |-Sequence  : %d\n", ntohs(icmph->sequence));
     fprintf(logfile, "\n");
 
     fprintf(logfile, "IP Header\n");
@@ -262,7 +260,7 @@ void print_icmp_packet(FILE* logfile, unsigned char* buffer, int size)
     //Move the pointer ahead and reduce the size of string
     print_data(logfile, buffer + header_size, size - header_size);
 
-    fprintf(logfile, "\n################################################");
+    fprintf(logfile, "\n\n");
 }
 
 void print_data (FILE* logfile, unsigned char* data, int size)
@@ -397,13 +395,14 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
     // ret = send(sockid, eth, size, 0);
     ret = sendto(sockid, eth, size, 0, (const struct sockaddr *)&device, sizeof(device));
 
-    if (ret > 0)
-        printf("%d Echo request sent from %.2X:%.2X:%.2X:%.2X:%.2X:%.2X to %.2X:%.2X:%.2X:%.2X:%.2X:%.2X\n",
-               ret,
-               eth->h_source[0], eth->h_source[1], eth->h_source[2],
-               eth->h_source[3], eth->h_source[4], eth->h_source[5],
-               eth->h_dest[0], eth->h_dest[1], eth->h_dest[2],
-               eth->h_dest[3], eth->h_dest[4], eth->h_dest[5]);
+    if (ret > 0) {
+        printf("[%d] ICMP packet relayed\n", ret);
+        printf("     |-from ");
+        PRINT_MAC_ADDRESS(stdout, eth->h_source);
+        printf("     |-to   ");
+        PRINT_MAC_ADDRESS(stdout, eth->h_dest);
+        printf("\n");
+    }
 
     // close(sockid);
 }

