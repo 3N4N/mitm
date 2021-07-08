@@ -27,7 +27,7 @@ struct sockaddr_in source,dest;
 int tcp=0,udp=0,icmp=0,others=0,igmp=0,total=0,i,j;
 
 
-void process_packet(FILE* logfile, unsigned char* buffer, int size)
+void sniff_and_relay(FILE* logfile, int sockid, unsigned char* buffer, int size)
 {
     //Get the IP Header part of this packet , excluding the ethernet header
     struct iphdr *iph = (struct iphdr*)(buffer + sizeof(struct ethhdr));
@@ -35,7 +35,8 @@ void process_packet(FILE* logfile, unsigned char* buffer, int size)
     switch (iph->protocol) {
     case 1:  //ICMP Protocol
         ++icmp;
-        print_icmp_packet(logfile, buffer , size);
+        print_icmp_packet(logfile, buffer, size);
+        relay_icmp_packet(sockid, buffer, size);
         break;
 
     case 2:  //IGMP Protocol
@@ -45,7 +46,7 @@ void process_packet(FILE* logfile, unsigned char* buffer, int size)
     case 6:  //TCP Protocol
         ++tcp;
         print_tcp_packet(logfile, buffer, size);
-        // relay_tcp_packet(buffer, size);
+        // relay_tcp_packet(sockid, buffer, size);
         break;
 
     case 17: //UDP Protocol
