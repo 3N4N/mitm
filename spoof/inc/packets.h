@@ -1,5 +1,5 @@
 #ifndef _PACKETS_H_
-# define _PACKETS_H_
+#define _PACKETS_H_
 
 # include <stdint.h>
 # define ETH_HDR_LEN 14

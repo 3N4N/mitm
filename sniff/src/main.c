@@ -6,6 +6,8 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 
+#include "sniff.h"
+
 int main()
 {
     int saddr_size , data_size;
@@ -13,7 +15,7 @@ int main()
 
     unsigned char *buffer = (unsigned char *) malloc(65536); //Its Big!
 
-    // logfile=fopen("log.txt","w");
+    // FILE *logfile=fopen("log.txt","w");
     // if(logfile==NULL)
     // {
     //     printf("Unable to create log.txt file.");
@@ -33,14 +35,15 @@ int main()
     {
         saddr_size = sizeof saddr;
         //Receive a packet
-        data_size = recvfrom(sock_raw , buffer , 65536 , 0 , &saddr , (socklen_t*)&saddr_size);
+        // data_size = recv(sock_raw, buffer, 65536, 0);
+        data_size = recvfrom(sock_raw, buffer, 65536, 0, &saddr, (socklen_t*)&saddr_size);
         if(data_size <0 )
         {
             printf("Recvfrom error , failed to get packets\n");
             return 1;
         }
         //Now process the packet
-        // process_packet(buffer , data_size);
+        // process_packet(logfile, buffer, data_size);
         relay_icmp_packet(sock_raw, buffer, data_size);
     }
     close(sock_raw);
