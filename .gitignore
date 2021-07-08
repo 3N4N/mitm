@@ -3,5 +3,7 @@ bin/
 *tags*
 *.vim
 *.out
+log.txt
+
 spoof/spoof
 sniff/sniff
