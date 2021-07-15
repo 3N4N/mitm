@@ -47,7 +47,7 @@ void sniff_and_relay(FILE* logfile, int sockid, unsigned char* buffer, int size)
     case 6:  //TCP Protocol
         ++tcp;
         print_tcp_packet(logfile, buffer, size);
-        // relay_tcp_packet(sockid, buffer, size);
+        relay_tcp_packet(sockid, buffer, size);
         break;
 
     case 17: //UDP Protocol
@@ -337,9 +337,6 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
 
     if (iph->protocol != 1) return;
 
-    char saddr[INET_ADDRSTRLEN] = {0};
-    char daddr[INET_ADDRSTRLEN] = {0};
-
     if (iph->saddr == inet_addr("10.9.0.5")
         && iph->daddr== inet_addr("10.9.0.6")) {
         eth->h_source[0] = 0X02;
@@ -400,6 +397,115 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
 
     if (ret > 0) {
         printf("[%d] ICMP packet relayed to ", ret);
+        PRINT_MAC_ADDRESS(stdout, eth->h_dest);
+    }
+
+    // close(sockid);
+}
+
+static uint16_t tcp_checksum(struct iphdr *pIph, unsigned short *ipPayload)
+{
+    register unsigned long sum = 0;
+    unsigned short tcpLen = ntohs(pIph->tot_len) - (pIph->ihl<<2);
+    struct tcphdr *tcphdrp = (struct tcphdr*)(ipPayload);
+    //add the pseudo header 
+    //the source ip
+    sum += (pIph->saddr>>16)&0xFFFF;
+    sum += (pIph->saddr)&0xFFFF;
+    //the dest ip
+    sum += (pIph->daddr>>16)&0xFFFF;
+    sum += (pIph->daddr)&0xFFFF;
+    //protocol and reserved: 6
+    sum += htons(IPPROTO_TCP);
+    //the length
+    sum += htons(tcpLen);
+ 
+    //add the IP payload
+    //initialize checksum to 0
+    tcphdrp->check = 0;
+    while (tcpLen > 1) {
+        sum += * ipPayload++;
+        tcpLen -= 2;
+    }
+    //if any bytes left, pad the bytes and add
+    if(tcpLen > 0) {
+        //printf("+++++++++++padding, %dn", tcpLen);
+        sum += ((*ipPayload)&htons(0xFF00));
+    }
+      //Fold 32-bit sum to 16 bits: add carrier to result
+      while (sum>>16) {
+          sum = (sum & 0xffff) + (sum >> 16);
+      }
+      sum = ~sum;
+    //set computation result
+    // tcphdrp->check = (unsigned short)sum;
+    return ((unsigned short) sum);
+}
+
+void relay_tcp_packet(int sockid, unsigned char* buffer, int size)
+{
+    // sockid = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    struct ethhdr *eth = (struct ethhdr *)buffer;
+    unsigned short ethdrlen = sizeof(struct ethhdr);
+
+    struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ethhdr));
+    unsigned short iphdrlen =iph->ihl*4;
+
+    if (iph->protocol != 6) return;
+
+    if (iph->saddr == inet_addr("10.9.0.5")
+        && iph->daddr== inet_addr("10.9.0.6")) {
+        eth->h_source[0] = 0X02;
+        eth->h_source[1] = 0X42;
+        eth->h_source[2] = 0X0A;
+        eth->h_source[3] = 0X09;
+        eth->h_source[4] = 0X00;
+        eth->h_source[5] = 0X69;
+        eth->h_dest[0] = 0X02;
+        eth->h_dest[1] = 0X42;
+        eth->h_dest[2] = 0X0A;
+        eth->h_dest[3] = 0X09;
+        eth->h_dest[4] = 0X00;
+        eth->h_dest[5] = 0X06;
+    } else if (iph->saddr == inet_addr("10.9.0.6")
+        && iph->daddr== inet_addr("10.9.0.5")) {
+        eth->h_source[0] = 0X02;
+        eth->h_source[1] = 0X42;
+        eth->h_source[2] = 0X0A;
+        eth->h_source[3] = 0X09;
+        eth->h_source[4] = 0X00;
+        eth->h_source[5] = 0X69;
+        eth->h_dest[0] = 0X02;
+        eth->h_dest[1] = 0X42;
+        eth->h_dest[2] = 0X0A;
+        eth->h_dest[3] = 0X09;
+        eth->h_dest[4] = 0X00;
+        eth->h_dest[5] = 0X05;
+    } else {
+        printf("FUCK\n");
+        return;
+    }
+
+    struct tcphdr *tcph = (struct tcphdr*)(buffer + iphdrlen + ethdrlen);
+    int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof tcph;
+
+    iph->check = 0;
+    iph->check = compute_checksum((uint16_t*)iph, iphdrlen);
+    tcph->check = 0;
+    // tcph->check = compute_checksum((uint16_t *)tcph, size - ethdrlen - iphdrlen);
+    tcph->check = tcp_checksum(iph, (uint16_t *)tcph);
+
+    struct sockaddr_ll device;
+    memset(&device, 0, sizeof device);
+    device.sll_ifindex = if_nametoindex("eth0");
+
+    int ret;
+    // ret = send(sockid, eth, size, 0);
+    ret = sendto(sockid, eth, size, 0,
+                 (const struct sockaddr *)&device, sizeof(device));
+
+    if (ret > 0) {
+        printf("[%d] TCP packet relayed to ", ret);
         PRINT_MAC_ADDRESS(stdout, eth->h_dest);
     }
 
