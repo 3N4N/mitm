@@ -1,5 +1,5 @@
-#ifndef __UTIL_H_
-#define __UTIL_H_
+#ifndef _UTIL_H_
+#define _UTIL_H_
 
 #define PRINT_MAC_ADDRESS(F,X)  fprintf(F, \
                                         "%02X:%02X:%02X:%02X:%02X:%02X\n", \
@@ -15,4 +15,4 @@
                                         X[2],               \
                                         X[3]);
 
-#endif  // __UTIL_H_
+#endif  // _UTIL_H_
