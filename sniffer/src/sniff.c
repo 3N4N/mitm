@@ -28,11 +28,11 @@ struct sockaddr_in source,dest;
 int tcp=0,udp=0,icmp=0,others=0,igmp=0,total=0,i,j;
 
 
-uint16_t compute_checksum(uint16_t *addr, int len);
-uint16_t ip_checksum(uint16_t *iph, int len);
-uint16_t icmp_checksum(uint16_t *icmph, int len);
-uint16_t tcp_checksum(struct iphdr *iph, unsigned short *payload);
-// uint16_t udp_checksum(struct iphdr *iph, unsigned short *payload);
+unsigned short compute_checksum(unsigned short *addr, int len);
+unsigned short ip_checksum(unsigned short *iph, int len);
+unsigned short icmp_checksum(unsigned short *icmph, int len);
+unsigned short tcp_checksum(struct iphdr *iph, unsigned short *payload);
+// unsigned short udp_checksum(struct iphdr *iph, unsigned short *payload);
 
 
 void sniff_and_relay(FILE* logfile, int sockid, unsigned char* buffer, int size)
@@ -310,35 +310,36 @@ void print_data (FILE* logfile, unsigned char* data, int size)
 }
 
 
-uint16_t compute_checksum(uint16_t *addr, int len)
+unsigned short compute_checksum(unsigned short *addr, int len)
 {
-    uint16_t ret = 0;
-    uint32_t sum = 0;
-    uint16_t odd_byte;
+    unsigned short ret = 0;
+    unsigned long sum = 0;
+    unsigned short odd_byte;
 
     while (len > 1) {
         sum += *addr++;
         len -= 2;
     }
 
-    if (len == 1) {
-        *(uint8_t *)(&odd_byte) = *(uint8_t *)addr;
-        sum += odd_byte;
+    if (len > 0) {
+        sum += ((*addr) & htons(0xFF00));
     }
 
-    sum = (sum >> 16) + (sum & 0xffff);
-    sum += (sum >> 16);
+    while (sum >> 16) {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+
     ret = ~sum;
 
     return ret;
 }
 
-uint16_t ip_checksum(uint16_t *iph, int len)
+unsigned short ip_checksum(unsigned short *iph, int len)
 {
     return compute_checksum(iph, len);
 }
 
-uint16_t icmp_checksum(uint16_t *icmph, int len)
+unsigned short icmp_checksum(unsigned short *icmph, int len)
 {
     return compute_checksum(icmph, len);
 }
@@ -398,9 +399,9 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
     // print_data(stdout, buffer + header_size, size - header_size );
 
     iph->check = 0;
-    iph->check = ip_checksum((uint16_t*)iph, iphdrlen);
+    iph->check = ip_checksum((unsigned short*)iph, iphdrlen);
     icmph->checksum = 0;
-    icmph->checksum = icmp_checksum((uint16_t *)icmph,
+    icmph->checksum = icmp_checksum((unsigned short *)icmph,
                                        size - ethdrlen - iphdrlen);
 
     struct sockaddr_ll device;
@@ -420,37 +421,35 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
     // close(sockid);
 }
 
-uint16_t tcp_checksum(struct iphdr *iph, unsigned short *payload)
+unsigned short tcp_checksum(struct iphdr *iph, unsigned short *payload)
 {
-    register unsigned long sum = 0;
-    uint16_t odd_byte;
-    unsigned short tcpLen = ntohs(iph->tot_len) - (iph->ihl<<2);
-    struct tcphdr *tcphdrp = (struct tcphdr*)(payload);
+    unsigned short ret;
+    unsigned long sum = 0;
+    unsigned short odd_byte;
+    int i;
 
-    sum += (iph->saddr>>16) & 0xFFFF;
-    sum += (iph->saddr) & 0xFFFF;
-    sum += (iph->daddr>>16) & 0xFFFF;
-    sum += (iph->daddr) & 0xFFFF;
-    sum += htons(IPPROTO_TCP);
-    sum += htons(tcpLen);
+    unsigned short tcplen = ntohs(iph->tot_len) - (iph->ihl<<2);
 
-    // tcphdrp->check = 0;
-    while (tcpLen > 1) {
-        sum += * payload++;
-        tcpLen -= 2;
+    unsigned short *pseudo = malloc(sizeof(unsigned short) * (12 + tcplen));
+
+    pseudo[0] = (iph->saddr>>16) & 0xFFFF;
+    pseudo[1] = (iph->saddr) & 0xFFFF;
+    pseudo[2] = (iph->daddr>>16) & 0xFFFF;
+    pseudo[3] = (iph->daddr) & 0xFFFF;
+    pseudo[4] = htons(IPPROTO_TCP);
+    pseudo[5] = htons(tcplen);
+
+    for (i = 0; i < tcplen; i++) {
+        pseudo[6+i] = payload[i];
     }
 
-    if(tcpLen > 0) {
-        *(uint8_t *)(&odd_byte) = *(uint8_t *)payload;
-        sum += odd_byte;
-    }
+    ret = compute_checksum(pseudo, 12+tcplen);
+    // printf("\n%d\n", ret);
+    // printf("m: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN"\n",
+    //        BYTE_TO_BINARY(ret>>8), BYTE_TO_BINARY(ret));
 
-    while (sum>>16) {
-        sum = (sum  &  0xffff) + (sum >> 16);
-    }
-    sum = ~sum;
-
-    return ((unsigned short) sum);
+    free(pseudo);
+    return ret;
 }
 
 void relay_tcp_packet(int sockid, unsigned char* buffer, int size)
@@ -501,9 +500,9 @@ void relay_tcp_packet(int sockid, unsigned char* buffer, int size)
     int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof tcph;
 
     iph->check = 0;
-    iph->check = ip_checksum((uint16_t*)iph, iphdrlen);
+    iph->check = ip_checksum((unsigned short*)iph, iphdrlen);
     tcph->check = 0;
-    tcph->check = tcp_checksum(iph, (uint16_t *)tcph);
+    tcph->check = tcp_checksum(iph, (unsigned short *)tcph);
 
     struct sockaddr_ll device;
     memset(&device, 0, sizeof device);
