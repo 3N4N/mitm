@@ -28,6 +28,13 @@ struct sockaddr_in source,dest;
 int tcp=0,udp=0,icmp=0,others=0,igmp=0,total=0,i,j;
 
 
+uint16_t compute_checksum(uint16_t *addr, int len);
+uint16_t ip_checksum(uint16_t *iph, int len);
+uint16_t icmp_checksum(uint16_t *icmph, int len);
+uint16_t tcp_checksum(struct iphdr *iph, unsigned short *payload);
+// uint16_t udp_checksum(struct iphdr *iph, unsigned short *payload);
+
+
 void sniff_and_relay(FILE* logfile, int sockid, unsigned char* buffer, int size)
 {
     //Get the IP Header part of this packet , excluding the ethernet header
@@ -303,7 +310,7 @@ void print_data (FILE* logfile, unsigned char* data, int size)
 }
 
 
-static uint16_t compute_checksum(uint16_t *addr, int len)
+uint16_t compute_checksum(uint16_t *addr, int len)
 {
     uint16_t ret = 0;
     uint32_t sum = 0;
@@ -324,6 +331,16 @@ static uint16_t compute_checksum(uint16_t *addr, int len)
     ret = ~sum;
 
     return ret;
+}
+
+uint16_t ip_checksum(uint16_t *iph, int len)
+{
+    return compute_checksum(iph, len);
+}
+
+uint16_t icmp_checksum(uint16_t *icmph, int len)
+{
+    return compute_checksum(icmph, len);
 }
 
 void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
@@ -381,9 +398,9 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
     // print_data(stdout, buffer + header_size, size - header_size );
 
     iph->check = 0;
-    iph->check = compute_checksum((uint16_t*)iph, iphdrlen);
+    iph->check = ip_checksum((uint16_t*)iph, iphdrlen);
     icmph->checksum = 0;
-    icmph->checksum = compute_checksum((uint16_t *)icmph,
+    icmph->checksum = icmp_checksum((uint16_t *)icmph,
                                        size - ethdrlen - iphdrlen);
 
     struct sockaddr_ll device;
@@ -403,42 +420,36 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
     // close(sockid);
 }
 
-static uint16_t tcp_checksum(struct iphdr *pIph, unsigned short *ipPayload)
+uint16_t tcp_checksum(struct iphdr *iph, unsigned short *payload)
 {
     register unsigned long sum = 0;
-    unsigned short tcpLen = ntohs(pIph->tot_len) - (pIph->ihl<<2);
-    struct tcphdr *tcphdrp = (struct tcphdr*)(ipPayload);
-    //add the pseudo header 
-    //the source ip
-    sum += (pIph->saddr>>16)&0xFFFF;
-    sum += (pIph->saddr)&0xFFFF;
-    //the dest ip
-    sum += (pIph->daddr>>16)&0xFFFF;
-    sum += (pIph->daddr)&0xFFFF;
-    //protocol and reserved: 6
+    uint16_t odd_byte;
+    unsigned short tcpLen = ntohs(iph->tot_len) - (iph->ihl<<2);
+    struct tcphdr *tcphdrp = (struct tcphdr*)(payload);
+
+    sum += (iph->saddr>>16) & 0xFFFF;
+    sum += (iph->saddr) & 0xFFFF;
+    sum += (iph->daddr>>16) & 0xFFFF;
+    sum += (iph->daddr) & 0xFFFF;
     sum += htons(IPPROTO_TCP);
-    //the length
     sum += htons(tcpLen);
- 
-    //add the IP payload
-    //initialize checksum to 0
-    tcphdrp->check = 0;
+
+    // tcphdrp->check = 0;
     while (tcpLen > 1) {
-        sum += * ipPayload++;
+        sum += * payload++;
         tcpLen -= 2;
     }
-    //if any bytes left, pad the bytes and add
+
     if(tcpLen > 0) {
-        //printf("+++++++++++padding, %dn", tcpLen);
-        sum += ((*ipPayload)&htons(0xFF00));
+        *(uint8_t *)(&odd_byte) = *(uint8_t *)payload;
+        sum += odd_byte;
     }
-      //Fold 32-bit sum to 16 bits: add carrier to result
-      while (sum>>16) {
-          sum = (sum & 0xffff) + (sum >> 16);
-      }
-      sum = ~sum;
-    //set computation result
-    // tcphdrp->check = (unsigned short)sum;
+
+    while (sum>>16) {
+        sum = (sum  &  0xffff) + (sum >> 16);
+    }
+    sum = ~sum;
+
     return ((unsigned short) sum);
 }
 
@@ -490,9 +501,8 @@ void relay_tcp_packet(int sockid, unsigned char* buffer, int size)
     int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof tcph;
 
     iph->check = 0;
-    iph->check = compute_checksum((uint16_t*)iph, iphdrlen);
+    iph->check = ip_checksum((uint16_t*)iph, iphdrlen);
     tcph->check = 0;
-    // tcph->check = compute_checksum((uint16_t *)tcph, size - ethdrlen - iphdrlen);
     tcph->check = tcp_checksum(iph, (uint16_t *)tcph);
 
     struct sockaddr_ll device;
