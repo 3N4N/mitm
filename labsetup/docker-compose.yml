@@ -38,7 +38,7 @@ services:
           - ALL
         privileged: true
         volumes:
-          - /home/enan/projects/:/volumes
+          - /home/enan/projects/mitm/:/volumes
         networks:
             net-10.9.0.0:
                 ipv4_address: 10.9.0.105
