@@ -16,10 +16,19 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    int sock;
+
     char *victim_ip_1, *victim_ip_2, *interface;
     unsigned char *victim_mac_1 = NULL;
     unsigned char *victim_mac_2 = NULL;
-    unsigned char *hacker_mac = "02:42:0a:09:00:69";
+    unsigned char *hacker_mac = NULL;
+
+    // victim_ip_1 = "10.9.0.5";
+    // victim_ip_2 = "10.9.0.6";
+    // interface   = "eth0";
+    // victim_mac_1 = "02:42:0a:09:00:05";
+    // victim_mac_2 = "02:42:0a:09:00:06";
+    hacker_mac   = "02:42:0a:09:00:69";
 
     victim_ip_1  = argv[1];
     victim_ip_2  = argv[2];
@@ -39,13 +48,11 @@ int main(int argc, char *argv[])
     }
     printf("Starting...\n");
 
-    int sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-
-    if(sock < 0) {
-        //Print the error with proper message
-        perror("Socket Error");
-        return 1;
+    if ((sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1) {
+        fprintf(stderr, "ERROR: Socket creation failed\n");
+        return EXIT_FAILURE;
     }
+
     while(1) {
         saddr_size = sizeof saddr;
         // data_size = recv(sock, buffer, 65536, 0);

