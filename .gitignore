@@ -4,6 +4,8 @@ bin/
 *.vim
 *.out
 log.txt
+snifflog
+ipmacinfo
 
 spoofer/spoof
 sniffer/sniff

