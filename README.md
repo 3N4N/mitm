@@ -18,6 +18,13 @@ The compose file is configured according to my personal use case, so you'll have
 to read through it and change necessary parts (specially volumes section for
 Host M).
 
+
+| Host Name | IP Address | MAC Address |
+| :-------: | :--------: | :---------: |
+| Host A | 10.9.0.5 | 02:42:0a:09:00:05 |
+| Host B | 10.9.0.5 | 02:42:0a:09:00:06 |
+| Host M | 10.9.0.105 | 02:42:0a:09:00:69 |
+
 Here are some useful aliases and commands to make the experience of using docker
 a breezier. Put the following codeblock in your bashrc.
 
