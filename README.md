@@ -22,7 +22,7 @@ Host M).
 | Host Name | IP Address | MAC Address |
 | :-------: | :--------: | :---------: |
 | Host A | 10.9.0.5 | 02:42:0a:09:00:05 |
-| Host B | 10.9.0.5 | 02:42:0a:09:00:06 |
+| Host B | 10.9.0.6 | 02:42:0a:09:00:06 |
 | Host M | 10.9.0.105 | 02:42:0a:09:00:69 |
 
 Here are some useful aliases and commands to make the experience of using docker
