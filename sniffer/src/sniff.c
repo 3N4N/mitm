@@ -173,7 +173,7 @@ void print_tcp_packet(FILE* logfile, unsigned char* buffer, int size)
     fprintf(logfile, "   |-Checksum           : %d\n", ntohs(tcph->check));
     fprintf(logfile, "   |-Urgent Pointer     : %d\n", tcph->urg_ptr);
     fprintf(logfile, "\n");
-    fprintf(logfile, "                       DATA Dump                       ");
+    fprintf(logfile, "                       DATA Dump");
     fprintf(logfile, "\n");
 
     fprintf(logfile, "IP Header\n");
